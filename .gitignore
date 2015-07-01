@@ -1,0 +1,7 @@
+*.pyc
+*.swp
+build
+.coverage
+htmlcov
+*.out
+*.db
