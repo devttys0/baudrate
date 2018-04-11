@@ -42,18 +42,28 @@ class RawInputWindows:
 
 class Baudrate:
 
-    VERSION = '1.0'
-    READ_TIMEOUT = 5
+    VERSION = '1.1'
+    READ_TIMEOUT = 1
     BAUDRATES = [
-#            "1200",
-#            "1800",
-#            "2400",
-#            "4800",
+            "1200",
+            "1800",
+            "2400",
+            "4800",
             "9600",
-            "38400",
             "19200",
+            "38400",
             "57600",
             "115200",
+            "230400",
+            "256000",
+            "460800",
+            "691200",
+            "921600",
+            "1036800",
+            "1036800",
+            "1152000",
+            #"1382400",
+            #"1843200",
     ]
 
     UPKEYS = ['u', 'U', 'A']
@@ -97,19 +107,23 @@ class Baudrate:
         self.serial = serial.Serial(self.port, timeout=self.timeout)
         self.NextBaudrate(0)
 
-    def NextBaudrate(self, updn):
+    def NextBaudrate(self, updn, accurate=False):
+        if accurate == True:
+            self.serial.baudrate += updn * 1200
+            self.serial.flush()
+            sys.stderr.write('\n\n@@@@@@@@@@@@@@@@@@@@@ Baudrate: %s @@@@@@@@@@@@@@@@@@@@@\n\n' % self.serial.baudrate)
+        else:
+            self.index += updn
 
-        self.index += updn
+            if self.index >= len(self.BAUDRATES):
+                self.index = 0
+            elif self.index < 0:
+                self.index = len(self.BAUDRATES) - 1
 
-        if self.index >= len(self.BAUDRATES):
-            self.index = 0
-        elif self.index < 0:
-            self.index = len(self.BAUDRATES) - 1
+            sys.stderr.write('\n\n@@@@@@@@@@@@@@@@@@@@@ Baudrate: %s @@@@@@@@@@@@@@@@@@@@@\n\n' % self.BAUDRATES[self.index])
 
-        sys.stderr.write('\n\n@@@@@@@@@@@@@@@@@@@@@ Baudrate: %s @@@@@@@@@@@@@@@@@@@@@\n\n' % self.BAUDRATES[self.index])
-
-        self.serial.flush()
-        self.serial.baudrate = self.BAUDRATES[self.index]
+            self.serial.flush()
+            self.serial.baudrate = self.BAUDRATES[self.index]
         self.serial.flush()
 
     def Detect(self):
@@ -124,7 +138,7 @@ class Baudrate:
         if not self.auto_detect:
             self.thread = Thread(None, self.HandleKeypress, None, (self, 1))
             self.thread.start()
-
+        # iii = 10
         while True:
             if start_time == 0:
                 start_time = time.time()
@@ -143,7 +157,6 @@ class Baudrate:
                     count += 1
                 else:
                     clear_counters = True
-
                 self._print(byte)
 
                 if count >= self.threshold and whitespace > 0 and punctuation > 0 and vowels > 0:
@@ -155,7 +168,7 @@ class Baudrate:
 
             if timed_out and self.auto_detect:
                 start_time = 0
-                self.NextBaudrate(-1)
+                self.NextBaudrate(-1, True)
                 clear_counters = True
                 timed_out = False
 
@@ -170,7 +183,7 @@ class Baudrate:
                 break
 
         self._print("\n")
-        return self.BAUDRATES[self.index]
+        return self.serial.baudrate
 
     def HandleKeypress(self, *args):
         userinput = RawInput()
@@ -230,7 +243,7 @@ if __name__ == '__main__':
         print "Usage: %s [OPTIONS]" % sys.argv[0]
         print ""
         print "\t-p <serial port>       Specify the serial port to use [/dev/ttyUSB0]"
-        print "\t-t <seconds>           Set the timeout period used when switching baudrates in auto detect mode [%d]" % baud.READ_TIMEOUT
+        print "\t-t <millisecond>       Set the timeout period used when switching baudrates in auto detect mode [%d]" % baud.READ_TIMEOUT
         print "\t-c <num>               Set the minimum ASCII character threshold used during auto detect mode [%d]" % baud.MIN_CHAR_COUNT
         print "\t-n <name>              Save the resulting serial configuration as <name> and automatically invoke minicom (implies -a)"
         print "\t-a                     Enable auto detect mode"
@@ -246,7 +259,7 @@ if __name__ == '__main__':
         auto = False
         run = False
         threshold = 25
-        timeout = 5
+        timeout = 3
         name = None
         port = '/dev/ttyUSB0'
 
@@ -258,7 +271,7 @@ if __name__ == '__main__':
 
         for opt, arg in opts:
             if opt == '-t':
-                timeout = int(arg)
+                timeout = int(arg) * 0.001
             elif opt == '-c':
                 threshold = int(arg)
             elif opt == '-p':
