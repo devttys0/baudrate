@@ -170,7 +170,6 @@ class Baudrate:
             if self.ctlc:
                 break
 
-        # self._print("\n")
         return self.BAUDRATES[self.index]
 
     def HandleKeypress(self, *args):
