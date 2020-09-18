@@ -1,9 +1,22 @@
 #!/usr/bin/env python3
+# License:          MIT
+# Authors:          
+# Craig Heffner     @devttys0   https://github.com/devttys0
+# Moritz Lottermann @Loris1123  https://github.com/Loris1123
+# Sick.Codes        @sickcodes  https://github.com/sickcodes
+# Usage:
+#           pip install -r requirements.txt
+#           sudo python baudrate.py /dev/ttyUSB0
 
 import sys
 import time
 import serial
 from threading import Thread
+import tty
+import termios
+import getch
+import subprocess
+from getopt import getopt as GetOpt, GetoptError
 
 class RawInput:
     """Gets a single character from standard input.  Does not echo to the screen."""
@@ -17,11 +30,7 @@ class RawInput:
 
 
 class RawInputUnix:
-    def __init__(self):
-        import tty, sys
-
     def __call__(self):
-        import sys, tty, termios
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -33,22 +42,18 @@ class RawInputUnix:
 
 
 class RawInputWindows:
-    def __init__(self):
-        import msvcrt
-
     def __call__(self):
-        import msvcrt
-        return msvcrt.getch()
+        return getch.getch()
 
 class Baudrate:
 
-    VERSION = '1.0'
+    VERSION = '3.0'
     READ_TIMEOUT = 5
     BAUDRATES = [
-#            "1200",
-#            "1800",
-#            "2400",
-#            "4800",
+           "1200",
+           "1800",
+           "2400",
+           "4800",
             "9600",
             "38400",
             "19200",
@@ -95,6 +100,7 @@ class Baudrate:
             sys.stderr.buffer.flush()
 
     def Open(self):
+        pass
         self.serial = serial.Serial(self.port, timeout=self.timeout)
         self.NextBaudrate(0)
 
@@ -216,26 +222,25 @@ class Baudrate:
 
 if __name__ == '__main__':
 
-    import subprocess
-    from getopt import getopt as GetOpt, GetoptError
 
     def usage():
         baud = Baudrate()
 
-        print("")
         print("Baudrate v%s" % baud.VERSION)
         print("Craig Heffner, http://www.devttys0.com")
+        print("Moritz Lottermann, https://github.com/Loris1123")
+        print("Sick.Codes, https://sick.codes")
         print("")
         print("Usage: %s [OPTIONS]" % sys.argv[0])
         print("")
-        print("\t-p <serial port>       Specify the serial port to use [/dev/ttyUSB0]")
-        print("\t-t <seconds>           Set the timeout period used when switching baudrates in auto detect mode [%d]" % baud.READ_TIMEOUT)
-        print("\t-c <num>               Set the minimum ASCII character threshold used during auto detect mode [%d]" % baud.MIN_CHAR_COUNT)
-        print("\t-n <name>              Save the resulting serial configuration as <name> and automatically invoke minicom (implies -a)")
-        print("\t-a                     Enable auto detect mode")
-        print("\t-b                     Display supported baud rates and exit")
-        print("\t-q                     Do not display data read from the serial port")
-        print("\t-h                     Display help")
+        print("\t-p <serial port>   Specify the serial port to use [/dev/ttyUSB0]")
+        print("\t-t <seconds>       Set the timeout period used when switching baudrates in auto detect mode [%d]" % baud.READ_TIMEOUT)
+        print("\t-c <num>           Set the minimum ASCII character threshold used during auto detect mode [%d]" % baud.MIN_CHAR_COUNT)
+        print("\t-n <name>          Save the resulting serial configuration as <name> and automatically invoke minicom (implies -a)")
+        print("\t-a                 Enable auto detect mode")
+        print("\t-b                 Display supported baud rates and exit")
+        print("\t-q                 Do not display data read from the serial port")
+        print("\t-h                 Display help")
         print("")
         sys.exit(1)
 
@@ -322,3 +327,4 @@ if __name__ == '__main__':
             baud.Close()
 
     main()
+
