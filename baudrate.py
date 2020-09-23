@@ -2,7 +2,7 @@
 # License:          MIT
 # Authors:          
 # Craig Heffner     @devttys0   https://github.com/devttys0
-# Moritz Lottermann @Loris1123  https://github.com/Loris1123
+#                   @Loris1123  https://github.com/Loris1123
 # Sick.Codes        @sickcodes  https://github.com/sickcodes
 # Usage:
 #           pip install -r requirements.txt
@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
         print("Baudrate v%s" % baud.VERSION)
         print("Craig Heffner, http://www.devttys0.com")
-        print("Moritz Lottermann, https://github.com/Loris1123")
+        print("@Loris1123, https://github.com/Loris1123")
         print("Sick.Codes, https://sick.codes")
         print("")
         print("Usage: %s [OPTIONS]" % sys.argv[0])
