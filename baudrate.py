@@ -14,7 +14,6 @@ import serial
 from threading import Thread
 import tty
 import termios
-import getch
 import subprocess
 from getopt import getopt as GetOpt, GetoptError
 
@@ -22,6 +21,7 @@ class RawInput:
     """Gets a single character from standard input.  Does not echo to the screen."""
     def __init__(self):
         try:
+            import getch
             self.impl = RawInputWindows()
         except ImportError:
             self.impl = RawInputUnix()
@@ -48,17 +48,30 @@ class RawInputWindows:
 class Baudrate:
 
     VERSION = '3.0'
-    READ_TIMEOUT = 5
+    READ_TIMEOUT = 1
     BAUDRATES = [
-           "1200",
-           "1800",
-           "2400",
-           "4800",
-            "9600",
-            "38400",
-            "19200",
-            "57600",
-            "115200",
+        "110",
+        "300",
+        "600",
+        "1200",
+        "1800",
+        "2400",
+        "4800",
+        "9600",
+        "14400",
+        "19200",
+        "38400",
+        "57600",
+        "115200",
+        "128000",
+        "230400",
+        "250000",
+        "256000",
+        "460800",
+        "500000",
+        "921600",
+        "1000000",
+        "2000000",
     ]
 
     UPKEYS = ['u', 'U', 'A']
