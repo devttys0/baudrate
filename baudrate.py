@@ -16,12 +16,12 @@ import tty
 import termios
 import subprocess
 from getopt import getopt as GetOpt, GetoptError
+import getch
 
 class RawInput:
     """Gets a single character from standard input.  Does not echo to the screen."""
     def __init__(self):
         try:
-            import getch
             self.impl = RawInputWindows()
         except ImportError:
             self.impl = RawInputUnix()
@@ -48,7 +48,7 @@ class RawInputWindows:
 class Baudrate:
 
     VERSION = '3.0'
-    READ_TIMEOUT = 1
+    READ_TIMEOUT = 5
     BAUDRATES = [
         "110",
         "300",
@@ -263,7 +263,7 @@ if __name__ == '__main__':
         auto = False
         run = False
         threshold = 25
-        timeout = 5
+        timeout = 1
         name = None
         port = '/dev/ttyUSB0'
 
