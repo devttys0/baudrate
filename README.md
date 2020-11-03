@@ -1,5 +1,16 @@
 # Baudrate Python 3 - fork of baudrate
 
+```bash
+git clone https://github.com/sickcodes/python3-baudrate
+cd python3-baudrate
+pipenv run pip install -r requirements.txt
+pipenv run sudo python baudrate.py -a
+
+# or without pipenv
+# pip install -r requirements.txt
+# sudo python baudrate.py
+```
+
 Forked and cherry-picked @Loris1123 commit because he deleted his repo.
 
 Added requirements.txt
@@ -15,7 +26,7 @@ Upgraded to Python3 by @Loris1123: https://github.com/Loris1123
 
 Modernized by Sick.Codes @sickcodes : https://github.com/sickcodes
 
-# Links
+# Follow for Updates
 
 https://twitter.com/sickcodes
 
