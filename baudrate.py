@@ -1,9 +1,22 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# License:          MIT
+# Authors:          
+# Craig Heffner     @devttys0   https://github.com/devttys0
+#                   @Loris1123  https://github.com/Loris1123
+# Sick.Codes        @sickcodes  https://github.com/sickcodes
+# Usage:
+#           pip install -r requirements.txt
+#           sudo python baudrate.py /dev/ttyUSB0
 
 import sys
 import time
 import serial
 from threading import Thread
+import tty
+import termios
+import subprocess
+from getopt import getopt as GetOpt, GetoptError
+import getch
 
 class RawInput:
     """Gets a single character from standard input.  Does not echo to the screen."""
@@ -17,11 +30,7 @@ class RawInput:
 
 
 class RawInputUnix:
-    def __init__(self):
-        import tty, sys
-
     def __call__(self):
-        import sys, tty, termios
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -33,27 +42,48 @@ class RawInputUnix:
 
 
 class RawInputWindows:
-    def __init__(self):
-        import msvcrt
-
     def __call__(self):
-        import msvcrt
-        return msvcrt.getch()
+        return getch.getch()
 
 class Baudrate:
 
-    VERSION = '1.0'
+    VERSION = '3.0'
     READ_TIMEOUT = 5
     BAUDRATES = [
-#            "1200",
-#            "1800",
-#            "2400",
-#            "4800",
-            "9600",
-            "38400",
-            "19200",
-            "57600",
-            "115200",
+        "110",
+        "300",
+        "600",
+        "1200",
+        "1800",
+        "2400",
+        "3600",
+        "4800",
+        "7200",
+        "9600",
+        "14400",
+        "19200",
+        "28800",
+        "31250",
+        "38400",
+        "57600",
+        "76800",
+        "115200",
+        "128000",
+        "153600",
+        "230400",
+        "250000",
+        "256000",
+        "307200",
+        "345600",
+        "460800",
+        "500000",
+        "512000",
+        "921600",
+        "1024000",
+        "2000000",
+        "2500000",
+        "3000000",
+        "3686400",
     ]
 
     UPKEYS = ['u', 'U', 'A']
@@ -91,9 +121,11 @@ class Baudrate:
 
     def _print(self, data):
         if self.verbose:
-            sys.stderr.write(data)
+            sys.stderr.buffer.write(data)
+            sys.stderr.buffer.flush()
 
     def Open(self):
+        pass
         self.serial = serial.Serial(self.port, timeout=self.timeout)
         self.NextBaudrate(0)
 
@@ -169,12 +201,10 @@ class Baudrate:
             if self.ctlc:
                 break
 
-        self._print("\n")
         return self.BAUDRATES[self.index]
 
     def HandleKeypress(self, *args):
         userinput = RawInput()
-
         while not self.ctlc:
             c = userinput()
             if c in self.UPKEYS:
@@ -203,8 +233,8 @@ class Baudrate:
         if name is not None and name:
             try:
                 open("/etc/minicom/minirc.%s" % name, "w").write(config)
-            except Exception, e:
-                print "Error saving minicom config file:", str(e)
+            except Exception as e:
+                print("Error saving minicom config file:", str(e))
                 success = False
 
         return (success, config)
@@ -217,27 +247,26 @@ class Baudrate:
 
 if __name__ == '__main__':
 
-    import subprocess
-    from getopt import getopt as GetOpt, GetoptError
 
     def usage():
         baud = Baudrate()
 
-        print ""
-        print "Baudrate v%s" % baud.VERSION
-        print "Craig Heffner, http://www.devttys0.com"
-        print ""
-        print "Usage: %s [OPTIONS]" % sys.argv[0]
-        print ""
-        print "\t-p <serial port>       Specify the serial port to use [/dev/ttyUSB0]"
-        print "\t-t <seconds>           Set the timeout period used when switching baudrates in auto detect mode [%d]" % baud.READ_TIMEOUT
-        print "\t-c <num>               Set the minimum ASCII character threshold used during auto detect mode [%d]" % baud.MIN_CHAR_COUNT
-        print "\t-n <name>              Save the resulting serial configuration as <name> and automatically invoke minicom (implies -a)"
-        print "\t-a                     Enable auto detect mode"
-        print "\t-b                     Display supported baud rates and exit"
-        print "\t-q                     Do not display data read from the serial port"
-        print "\t-h                     Display help"
-        print ""
+        print("Baudrate v%s" % baud.VERSION)
+        print("Craig Heffner, http://www.devttys0.com")
+        print("@Loris1123, https://github.com/Loris1123")
+        print("Sick.Codes, https://sick.codes")
+        print("")
+        print("Usage: %s [OPTIONS]" % sys.argv[0])
+        print("")
+        print("\t-p <serial port>   Specify the serial port to use [/dev/ttyUSB0]")
+        print("\t-t <seconds>       Set the timeout period used when switching baudrates in auto detect mode [%d]" % baud.READ_TIMEOUT)
+        print("\t-c <num>           Set the minimum ASCII character threshold used during auto detect mode [%d]" % baud.MIN_CHAR_COUNT)
+        print("\t-n <name>          Save the resulting serial configuration as <name> and automatically invoke minicom (implies -a)")
+        print("\t-a                 Enable auto detect mode")
+        print("\t-b                 Display supported baud rates and exit")
+        print("\t-q                 Do not display data read from the serial port")
+        print("\t-h                 Display help")
+        print("")
         sys.exit(1)
 
     def main():
@@ -246,14 +275,14 @@ if __name__ == '__main__':
         auto = False
         run = False
         threshold = 25
-        timeout = 5
+        timeout = 1
         name = None
         port = '/dev/ttyUSB0'
 
         try:
             (opts, args) = GetOpt(sys.argv[1:], 'p:t:c:n:abqh')
-        except GetoptError, e:
-            print e
+        except GetoptError as e:
+            print(e)
             usage()
 
         for opt, arg in opts:
@@ -279,46 +308,48 @@ if __name__ == '__main__':
         baud = Baudrate(port, threshold=threshold, timeout=timeout, name=name, verbose=verbose, auto=auto)
 
         if display:
-            print ""
+            print("")
             for rate in baud.BAUDRATES:
-                print "\t%s" % rate
-            print ""
+                print("\t{}".format(rate))
+            print("")
         else:
-            print ""
-            print "Starting baudrate detection on %s, turn on your serial device now." % port
-            print "Press Ctl+C to quit."
-            print ""
+            print("")
+            print("Starting baudrate detection on %s, turn on your serial device now." % port)
+            print("Press Up/Down to switch baudrates.")
+            print("Press Ctl+C to quit.")
+            print("")
 
             baud.Open()
 
             try:
                 rate = baud.Detect()
-                print "\nDetected baudrate: %s" % rate
+                print("\nDetected baudrate: {}".format(rate))
 
                 if name is None:
-                    print "\nSave minicom configuration as: ",
+                    print("\nSave minicom configuration as: ", end=" ")
                     name = sys.stdin.readline().strip()
-                    print ""
+                    print("")
 
                 (ok, config) = baud.MinicomConfig(name)
                 if name and name is not None:
                     if ok:
                         if not run:
-                            print "Configuration saved. Run minicom now [n/Y]? ",
+                            print("Configuration saved. Run minicom now [n/Y]? ", end=" ")
                             yn = sys.stdin.readline().strip()
-                            print ""
+                            print("")
                             if yn == "" or yn.lower().startswith('y'):
                                 run = True
 
                         if run:
                             subprocess.call(["minicom", name])
                     else:
-                        print config
+                        print(config)
                 else:
-                    print config
+                    print(config)
             except KeyboardInterrupt:
                 pass
 
             baud.Close()
 
     main()
+
