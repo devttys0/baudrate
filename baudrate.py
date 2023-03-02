@@ -74,6 +74,7 @@ class Baudrate:
 
     UPKEYS = ['u', 'U', 'A']
     DOWNKEYS = ['d', 'D', 'B']
+    RETURN = ['\n', '\r']
 
     MIN_CHAR_COUNT = 25
     WHITESPACE = [' ', '\t', '\r', '\n']
@@ -94,6 +95,7 @@ class Baudrate:
         self.buffer = ""
         self.max_display_chars = 80 # The widespread 80 column archaism should be fine
         self.newline_sub = f"\r{' ' * self.max_display_chars}\r"
+        self.stderr_needs_capping = False
         self.allow_newline = allow_newline
 
         self._gen_char_list()
@@ -108,6 +110,10 @@ class Baudrate:
         for c in self.WHITESPACE:
             if c not in self.valid_characters:
                 self.valid_characters.append(c)
+
+    def cap_stderr(self):
+        sys.stderr.write('\n\n')
+        self.stderr_needs_capping = False
 
     def _print(self, data, allow_newline=False):
         if self.verbose:
@@ -133,6 +139,9 @@ class Baudrate:
                     else:
                         self.buffer += buf
 
+                if self.stderr_needs_capping:
+                    self.cap_stderr()
+
                 prefix = '\r' if reprinting else ""
                 sys.stderr.write(f"{prefix}{self.buffer}")
 
@@ -154,7 +163,12 @@ class Baudrate:
         elif self.index < 0:
             self.index = len(self.BAUDRATES) - 1
 
-        sys.stderr.write('\n\n@@@@@@@@@@@@@@@@@@@@@ Baudrate: %s @@@@@@@@@@@@@@@@@@@@@\n\n' % self.BAUDRATES[self.index])
+        if not self.stderr_needs_capping:
+            sys.stderr.write('\n\n')
+            self.stderr_needs_capping = True
+
+        sys.stderr.write('\r@@@@@@@@@@@@@@@@@@@@@ Baudrate: %s @@@@@@@@@@@@@@@@@@@@@' % self.BAUDRATES[self.index])
+
 
         self.serial.flush()
         self.serial.baudrate = self.BAUDRATES[self.index]
@@ -229,6 +243,10 @@ class Baudrate:
                 self.NextBaudrate(1)
             elif c in self.DOWNKEYS:
                 self.NextBaudrate(-1)
+            elif c in self.RETURN:
+                if self.stderr_needs_capping:
+                    self.cap_stderr()
+                sys.stderr.write('\n')
             elif c == '\x03':
                 self.ctlc = True
 
@@ -252,6 +270,8 @@ class Baudrate:
             try:
                 open("/etc/minicom/minirc.%s" % name, "w").write(config)
             except Exception as e:
+                if self.stderr_needs_capping:
+                    seld.cap_stderr()
                 print("Error saving minicom config file:", str(e))
                 success = False
 
