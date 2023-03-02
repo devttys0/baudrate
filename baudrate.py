@@ -80,7 +80,7 @@ class Baudrate:
     PUNCTUATION = ['.', ',', ':', ';', '?', '!']
     VOWELS = ['a', 'A', 'e', 'E', 'i', 'I', 'o', 'O', 'u', 'U']
 
-    def __init__(self, port=None, threshold=MIN_CHAR_COUNT, timeout=READ_TIMEOUT, name=None, auto=True, verbose=False):
+    def __init__(self, port=None, threshold=MIN_CHAR_COUNT, timeout=READ_TIMEOUT, name=None, auto=True, verbose=False, allow_newline=False):
         self.port = port
         self.threshold = threshold
         self.timeout = timeout
@@ -91,6 +91,10 @@ class Baudrate:
         self.valid_characters = []
         self.ctlc = False
         self.thread = None
+        self.buffer = ""
+        self.max_display_chars = 80 # The widespread 80 column archaism should be fine
+        self.newline_sub = f"\r{' ' * self.max_display_chars}\r"
+        self.allow_newline = allow_newline
 
         self._gen_char_list()
 
@@ -105,9 +109,37 @@ class Baudrate:
             if c not in self.valid_characters:
                 self.valid_characters.append(c)
 
-    def _print(self, data):
+    def _print(self, data, allow_newline=False):
         if self.verbose:
-            sys.stderr.write(data)
+            try:
+                buf = data.decode('utf-8')
+                reprinting = True
+                if allow_newline or self.allow_newline:
+                    if '\n' in buf:
+                        reprinting = False
+                    self.buffer += buf
+                else:
+                    if '\n' in buf:
+                        if '\n' == buf:  # Just a newline char
+                            self.buffer = self.newline_sub
+                            return  # Don't leave a blank line
+                        else:  #  Embedded newline(s)
+                            buf = buf.strip()  # Don't leave a blank line
+                            if '\n' in buf:
+                                pos = buf.rfind('\n')
+                                self.buffer = self.newline_sub + buf[pos + 1:]
+                            else:
+                                self.buffer = buf
+                    else:
+                        self.buffer += buf
+
+                prefix = '\r' if reprinting else ""
+                sys.stderr.write(f"{prefix}{self.buffer}")
+
+                if len(self.buffer) >= self.max_display_chars or not prefix:
+                    self.buffer = ""
+            except:
+                pass
 
     def Open(self):
         self.serial = serial.Serial(self.port, timeout=self.timeout)
@@ -185,7 +217,7 @@ class Baudrate:
             if self.ctlc:
                 break
 
-        self._print("\n")
+        self._print("\n", allow_newline=True)
         return self.BAUDRATES[self.index]
 
     def HandleKeypress(self, *args):
@@ -252,6 +284,7 @@ if __name__ == '__main__':
         print("\t-a                     Enable auto detect mode")
         print("\t-b                     Display supported baud rates and exit")
         print("\t-q                     Do not display data read from the serial port")
+        print("\t-v                     Don't supress newline in display data read from the serial port")
         print("\t-h                     Display help")
         print("")
         sys.exit(1)
@@ -259,6 +292,7 @@ if __name__ == '__main__':
     def main():
         display = False
         verbose = True
+        allow_newline = False
         auto = False
         run = False
         threshold = 25
@@ -267,7 +301,7 @@ if __name__ == '__main__':
         port = '/dev/ttyUSB0'
 
         try:
-            (opts, args) = GetOpt(sys.argv[1:], 'p:t:c:n:abqh')
+            (opts, args) = GetOpt(sys.argv[1:], 'p:t:c:n:abqvh')
         except GetoptError as e:
             print(e)
             usage()
@@ -289,10 +323,14 @@ if __name__ == '__main__':
                 display = True
             elif opt == '-q':
                 verbose = False
+                allow_newline = False
+            elif opt == '-v':
+                verbose = True
+                allow_newline = True
             else:
                 usage()
 
-        baud = Baudrate(port, threshold=threshold, timeout=timeout, name=name, verbose=verbose, auto=auto)
+        baud = Baudrate(port, threshold=threshold, timeout=timeout, name=name, verbose=verbose, auto=auto, allow_newline=allow_newline)
 
         if display:
             print("")
