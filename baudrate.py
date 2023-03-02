@@ -70,6 +70,8 @@ class Baudrate:
             "921600",
     ]
 
+    DEFAULT_BAUDRATE = "115200"
+
     UPKEYS = ['u', 'U', 'A']
     DOWNKEYS = ['d', 'D', 'B']
 
@@ -85,7 +87,7 @@ class Baudrate:
         self.name = name
         self.auto_detect = auto
         self.verbose = verbose
-        self.index = len(self.BAUDRATES) - 1
+        self.index = self.BAUDRATES.index(self.DEFAULT_BAUDRATE)
         self.valid_characters = []
         self.ctlc = False
         self.thread = None
