@@ -45,30 +45,32 @@ class Baudrate:
     VERSION = '1.0'
     READ_TIMEOUT = 5
     BAUDRATES = [
-            "50",
-            "75",
-            "110",
-            "134",
-            "150",
-            "200",
-            "300",
-            "600",
-            "1200",
-            "1800",
-            "2400",
-            "4800",
-            "9600",
-            "19200",
-            "28800",
-            "38400",
-            "57600",
-            "76800",
-            "115200",
-            "230400",
-            "460800",
-            "576000",
             "921600",
+            "576000",
+            "460800",
+            "230400",
+            "115200",
+            "76800",
+            "57600",
+            "38400",
+            "28800",
+            "19200",
+            "9600",
+            "4800",
+            "2400",
+            "1800",
+            "1200",
+            "600",
+            "300",
+            "200",
+            "150",
+            "134",
+            "110",
+            "75",
+            "50",
     ]
+
+    MAX_LEN = len(max(BAUDRATES, key=len))
 
     DEFAULT_BAUDRATE = "115200"
 
@@ -81,7 +83,7 @@ class Baudrate:
     PUNCTUATION = ['.', ',', ':', ';', '?', '!']
     VOWELS = ['a', 'A', 'e', 'E', 'i', 'I', 'o', 'O', 'u', 'U']
 
-    def __init__(self, port=None, threshold=MIN_CHAR_COUNT, timeout=READ_TIMEOUT, name=None, auto=True, verbose=False, allow_newline=False):
+    def __init__(self, port=None, threshold=MIN_CHAR_COUNT, timeout=READ_TIMEOUT, name=None, auto=True, verbose=False, allow_newline=False, toggle_baud=DEFAULT_BAUDRATE):
         self.port = port
         self.threshold = threshold
         self.timeout = timeout
@@ -97,6 +99,8 @@ class Baudrate:
         self.newline_sub = f"\r{' ' * self.max_display_chars}\r"
         self.stderr_needs_capping = False
         self.allow_newline = allow_newline
+        index = self.BAUDRATES.index(toggle_baud)
+        self.toggle_bauds = (index, index)
 
         self._gen_char_list()
 
@@ -154,25 +158,29 @@ class Baudrate:
         self.serial = serial.Serial(self.port, timeout=self.timeout)
         self.NextBaudrate(0)
 
+    def set_baud_from_index(self, index=None):
+        self.index = index if index else self.index
+
+        if not self.stderr_needs_capping:
+            sys.stderr.write('\n\n')
+            self.stderr_needs_capping = True
+
+        sys.stderr.write(f"\r@@@@@@@@@@@@@@@@@@@@@ Baudrate: {self.BAUDRATES[self.index]:>{Baudrate.MAX_LEN}} @@@@@@@@@@@@@@@@@@@@@")
+
+        self.serial.flush()
+        self.serial.baudrate = self.BAUDRATES[self.index]
+        self.serial.flush()
+
     def NextBaudrate(self, updn):
 
-        self.index += updn
+        self.index -= updn
 
         if self.index >= len(self.BAUDRATES):
             self.index = 0
         elif self.index < 0:
             self.index = len(self.BAUDRATES) - 1
 
-        if not self.stderr_needs_capping:
-            sys.stderr.write('\n\n')
-            self.stderr_needs_capping = True
-
-        sys.stderr.write('\r@@@@@@@@@@@@@@@@@@@@@ Baudrate: %s @@@@@@@@@@@@@@@@@@@@@' % self.BAUDRATES[self.index])
-
-
-        self.serial.flush()
-        self.serial.baudrate = self.BAUDRATES[self.index]
-        self.serial.flush()
+        self.set_baud_from_index()
 
     def Detect(self):
         count = 0
@@ -234,6 +242,14 @@ class Baudrate:
         self._print("\n", allow_newline=True)
         return self.BAUDRATES[self.index]
 
+    def toggle_baud(self):
+        prev_index = self.toggle_bauds[0]
+        next_index = self.toggle_bauds[1]
+        if self.index != next_index:
+            prev_index = self.index
+            self.set_baud_from_index(next_index)
+        self.toggle_bauds = (next_index, prev_index)
+
     def HandleKeypress(self, *args):
         userinput = RawInput()
 
@@ -243,6 +259,8 @@ class Baudrate:
                 self.NextBaudrate(1)
             elif c in self.DOWNKEYS:
                 self.NextBaudrate(-1)
+            elif c == ' ':
+                self.toggle_baud()
             elif c in self.RETURN:
                 if self.stderr_needs_capping:
                     self.cap_stderr()
@@ -305,9 +323,18 @@ if __name__ == '__main__':
         print("\t-b                     Display supported baud rates and exit")
         print("\t-q                     Do not display data read from the serial port")
         print("\t-v                     Don't supress newline in display data read from the serial port")
+        print("\t-T <baud>              Toggle between current value and the given baud when SPACE is pressed")
         print("\t-h                     Display help")
         print("")
         sys.exit(1)
+
+    def display_baudrates(msg=None):
+        if msg:
+            print(f"{msg}")
+        print()
+        for rate in Baudrate.BAUDRATES:
+            print("\t%s" % rate)
+        print()
 
     def main():
         display = False
@@ -319,9 +346,10 @@ if __name__ == '__main__':
         timeout = 5
         name = None
         port = '/dev/ttyUSB0'
+        toggle_baud = Baudrate.DEFAULT_BAUDRATE
 
         try:
-            (opts, args) = GetOpt(sys.argv[1:], 'p:t:c:n:abqvh')
+              (opts, args) = GetOpt(sys.argv[1:], 'p:t:c:n:abqvT:h')
         except GetoptError as e:
             print(e)
             usage()
@@ -347,16 +375,20 @@ if __name__ == '__main__':
             elif opt == '-v':
                 verbose = True
                 allow_newline = True
+            elif opt == '-T':
+                toggle_baud = arg
+                try:
+                    index = Baudrate.BAUDRATES.index(toggle_baud)
+                except ValueError:
+                    display_baudrates(f"Can't find '{toggle_baud}' baud in list:")
+                    sys.exit(1)
             else:
                 usage()
 
-        baud = Baudrate(port, threshold=threshold, timeout=timeout, name=name, verbose=verbose, auto=auto, allow_newline=allow_newline)
+        baud = Baudrate(port, threshold=threshold, timeout=timeout, name=name, verbose=verbose, auto=auto, allow_newline=allow_newline, toggle_baud=toggle_baud)
 
         if display:
-            print("")
-            for rate in baud.BAUDRATES:
-                print("\t%s" % rate)
-            print("")
+            display_baudrates()
         else:
             print("")
             print("Starting baudrate detection on %s, turn on your serial device now." % port)
